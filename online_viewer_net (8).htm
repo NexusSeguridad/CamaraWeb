@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>🧠 Análisis Inteligente</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f5f5f5; padding: 1em; }
+    video, canvas, img { max-width: 100%; border-radius: 12px; }
+    #result { margin-top: 1em; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <h2>📷 Captura y Análisis Inteligente</h2>
+  <video id="video" autoplay playsinline width="300"></video><br>
+  <button onclick="captureAndAnalyze()">📸 Capturar y Analizar</button>
+  <canvas id="canvas" width="300" height="225" style="display:none;"></canvas>
+  <div id="result">🔍 Esperando captura...</div>
+
+  <script>
+    let model;
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const result = document.getElementById('result');
+
+    async function initCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+    }
+
+    async function loadModel() {
+      model = await mobilenet.load();
+    }
+
+    async function captureAndAnalyze() {
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imgData = tf.browser.fromPixels(canvas);
+      const predictions = await model.classify(imgData);
+      imgData.dispose();
+
+      if (predictions.length > 0) {
+        const { className, probability } = predictions[0];
+        const suggestion = getSuggestion(className);
+        result.innerHTML = `🔎 Detectado: <b>${className}</b> (${(probability*100).toFixed(1)}%)<br>💡 Sugerencia: ${suggestion}`;
+      } else {
+        result.textContent = "No se pudo identificar la imagen.";
+      }
+    }
+
+    function getSuggestion(label) {
+      if (label.includes("helmet")) return "✅ EPP correcto. Buen ejemplo.";
+      if (label.includes("person")) return "⚠️ Verificar si lleva casco, guantes y protección.";
+      if (label.includes("mess")) return "🧹 Se recomienda ordenar el espacio para evitar accidentes.";
+      return "ℹ️ No se detectaron riesgos evidentes.";
+    }
+
+    initCamera();
+    loadModel();
+  </script>
+</body>
+</html>
